@@ -27,9 +27,9 @@ class dataManager:
     def initializeTokenizer (self, lookup_table, bagOfWords):
         listOfWords = list(lookup_table.keys())
         for word in bagOfWords:
-            temp_index = listOfWords.index(word)
-            self.wordToIndex[word] = temp_index
-            self.IndexToWord[temp_index] = word
+            self.wordToIndex[word] = listOfWords.index(word)
+        for key, value in self.wordToIndex.items():
+            self.IndexToWord[value] = key
         self.tokenizerSize = len(self.wordToIndex)
 
     def saveInputData(self, input_texts):

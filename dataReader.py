@@ -129,16 +129,14 @@ class dataReader:
             else:
                 coefs = np.asarray(values[1:], dtype='float32')
                 embeddings_index[word] = coefs
-                if word not in bagOfWords:
-                    bagOfWords.append(word)
 
         f.close()
-        for special_word in ['\t', '\n', 'UNK']:
-            if special_word not in bagOfWords:
-                bagOfWords.append(special_word)
-        embeddings_index['\t'] = np.asarray(list("0.5"*dimension), dtype='float32')
-        embeddings_index['\n'] = np.asarray(list("1" * dimension), dtype='float32')
-        embeddings_index['UNK'] = np.asarray(list("0" * dimension), dtype='float32')
+        embeddings_index['\t'] = np.full(dimension, 0.5, dtype='float32')
+        embeddings_index['\n'] = np.full(dimension, 1.0, dtype='float32')
+        embeddings_index['UNK'] = np.full(dimension, 0.0, dtype='float32')
+        for word in list(embeddings_index.keys()):
+            if word not in bagOfWords:
+                bagOfWords.append(word)
         return embeddings_index, bagOfWords
 
     def wordIsNumber (self, s):

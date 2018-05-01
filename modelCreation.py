@@ -28,7 +28,7 @@ class modelCreation:
         self.embeddings_lookup_table = None
         # Constant change it according to training machine
         self.NUMBER_OF_LSTM = 400
-        self.NUMBER_OF_SAMPLE = 512
+        self.NUMBER_OF_SAMPLE = 128
         self.EMBEDDING_DIMENSION = 50
         self.PROGRESS_PATH = "Data/progress.txt"
         # self.TRAINING_DATA_PATH = "Data/training_data/DUC2007_Summarization_Documents/duc2007_testdocs/"
@@ -37,6 +37,7 @@ class modelCreation:
         self.MODEL_PATH = "Data/s2s.h5"
 
     def createTokenizerFromTrainingData(self, training_data_path, progress_path, embedding_matrix):
+        print (" -I- [modelCreation.createTokenizerFromTrainingData] Creating data set with respect to embedding")
         # Read the last progress
         self.current_progress = self.reader.readProgress(progress_path)
         # Read the training data start from last progress
@@ -52,7 +53,6 @@ class modelCreation:
     def loadEmbedding(self, weight_path, dimension):
         self.embeddings_lookup_table, bagOfWords = self.reader.readWeight(weight_path, dimension)
         self.manager.initializeTokenizer(self.embeddings_lookup_table, bagOfWords)
-        print(self.embeddings_lookup_table)
         print(' -I- [modelCreation.loadEmbedding] Loaded %s word vectors' % len(self.embeddings_lookup_table))
         # create a weight matrix for words in training docs
         embedding_matrix = np.zeros((self.manager.tokenizerSize + 1, dimension))
