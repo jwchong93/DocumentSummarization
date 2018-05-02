@@ -21,7 +21,7 @@ class dataManager:
         self.outputTexts = []
         # Constant
         self.MAX_INPUT_LENGTH = 400
-        self.MAX_OUTPUT_LENGTH = 80
+        self.MAX_OUTPUT_LENGTH = 50
         pass
 
     def initializeTokenizer (self, lookup_table, bagOfWords):
@@ -34,7 +34,7 @@ class dataManager:
 
     def saveInputData(self, input_texts):
         self.inputData = np.zeros(
-            (len(input_texts), self.MAX_INPUT_LENGTH, self.tokenizerSize), dtype='float32')
+            (len(input_texts), self.MAX_INPUT_LENGTH), dtype='uint32')
         for t, input_text in enumerate(input_texts):
             text = input_text.lower()
             text = self.removeStopWords(text)
@@ -49,14 +49,14 @@ class dataManager:
                 else:
                     tempWord = word
                 index = self.wordToIndex[tempWord]
-                self.inputData[t, i, index] = 1.
+                self.inputData[t, i] = index
         print("Input Text Shape:%s" % str(self.inputData.shape))
 
-    def saveOutputData(self, target_texts):
+    def saveOutputData(self, target_texts, vector_lookup_table , dimension):
         self.outputData = np.zeros(
-            (len(target_texts), self.MAX_OUTPUT_LENGTH, self.tokenizerSize), dtype='float32')
+            (len(target_texts), self.MAX_OUTPUT_LENGTH), dtype='uint32')
         self.targetData = np.zeros(
-            (len(target_texts), self.MAX_OUTPUT_LENGTH, self.tokenizerSize), dtype='float32')
+            (len(target_texts), self.MAX_OUTPUT_LENGTH, dimension), dtype='float32')
 
         for t, target_text in enumerate(target_texts):
             text = target_text.lower()
@@ -78,14 +78,13 @@ class dataManager:
                 else:
                     tempWord = word
                 index = self.wordToIndex[tempWord]
-                self.inputData[t, i, index] = 1.
+                self.inputData[t, i] = index
             for i, word in enumerate(target_text):
                 if word not in self.wordToIndex:
                     tempWord = 'UNK'
                 else:
                     tempWord = word
-                index = self.wordToIndex[tempWord]
-                self.targetData[t, i, index] = 1.
+                self.targetData[t, i] = np.array(vector_lookup_table.get(tempWord), dtype='float32')
         print("Output Text Shape:%s" % str(self.outputData.shape))
         print("Target Text Shape:%s" % str(self.targetData.shape))
 

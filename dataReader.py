@@ -120,7 +120,7 @@ class dataReader:
         embeddings_index = dict()
         f = open(weight_path, encoding="utf8")
         for i, line in enumerate(f):
-            if i >= 300000:
+            if i >= 200000:
                 break
             values = line.split()
             word = values[0].lower()
@@ -129,14 +129,15 @@ class dataReader:
             else:
                 coefs = np.asarray(values[1:], dtype='float32')
                 embeddings_index[word] = coefs
+                bagOfWords.append(word)
 
         f.close()
         embeddings_index['\t'] = np.full(dimension, 0.5, dtype='float32')
         embeddings_index['\n'] = np.full(dimension, 1.0, dtype='float32')
         embeddings_index['UNK'] = np.full(dimension, 0.0, dtype='float32')
-        for word in list(embeddings_index.keys()):
-            if word not in bagOfWords:
-                bagOfWords.append(word)
+        bagOfWords.append('\t')
+        bagOfWords.append('\n')
+        bagOfWords.append('UNK')
         return embeddings_index, bagOfWords
 
     def wordIsNumber (self, s):

@@ -1,4 +1,4 @@
-from keras.layers import Embedding
+from keras.layers import Embedding, Flatten
 from keras.models import Model, load_model
 from keras.layers import LSTM, Dense, Input
 import numpy as np
@@ -15,24 +15,23 @@ class modelCreation:
         self.reader = dr.dataReader()
         self.manager = dm.dataManager()
         # Define data to read
-        # self.reader.readTrainingData = self.reader.readDUCData
+        self.reader.readTrainingData = self.reader.readDUCData
         # self.reader.readTrainingData = self.reader.readBBCNews
-        self.reader.readTrainingData = self.reader.readReviews
+        # self.reader.readTrainingData = self.reader.readReviews
         # Input
         self.inputEmbeddingLayer = None
         # Output
         self.outputEmbeddingLayer = None
-        self.targetEmbeddingLayer = None
         # Internal
         self.current_progress = 0
         self.embeddings_lookup_table = None
         # Constant change it according to training machine
         self.NUMBER_OF_LSTM = 400
-        self.NUMBER_OF_SAMPLE = 128
+        self.NUMBER_OF_SAMPLE = 512
         self.EMBEDDING_DIMENSION = 50
         self.PROGRESS_PATH = "Data/progress.txt"
-        # self.TRAINING_DATA_PATH = "Data/training_data/DUC2007_Summarization_Documents/duc2007_testdocs/"
-        self.TRAINING_DATA_PATH = "Data/training_data/Reviews.csv"
+        self.TRAINING_DATA_PATH = "Data/training_data/DUC2007_Summarization_Documents/duc2007_testdocs/"
+        # self.TRAINING_DATA_PATH = "Data/training_data/Reviews.csv"
         self.GLOVE_WEIGHT_PATH = "Data/pre_trained_GloVe/glove.6B.50d.txt"
         self.MODEL_PATH = "Data/s2s.h5"
 
@@ -48,7 +47,7 @@ class modelCreation:
             raise EOFError("Data finished")
         # Initialize the tokenizer with respect to the data that read into embedding
         self.manager.saveInputData(input_texts)
-        self.manager.saveOutputData(target_texts)
+        self.manager.saveOutputData(target_texts, self.embeddings_lookup_table, self.EMBEDDING_DIMENSION)
 
     def loadEmbedding(self, weight_path, dimension):
         self.embeddings_lookup_table, bagOfWords = self.reader.readWeight(weight_path, dimension)
@@ -62,20 +61,15 @@ class modelCreation:
                 embedding_matrix[i] = embedding_vector
         self.inputEmbeddingLayer = Embedding(self.manager.tokenizerSize + 1, dimension, weights=[embedding_matrix],
                                              input_length=self.manager.MAX_INPUT_LENGTH, trainable=False,
-                                             input_shape=(self.NUMBER_OF_SAMPLE, 1, self.manager.MAX_INPUT_LENGTH))
+                                             input_shape=(self.NUMBER_OF_SAMPLE, self.manager.MAX_INPUT_LENGTH))
 
         self.outputEmbeddingLayer = Embedding(self.manager.tokenizerSize + 1, dimension, weights=[embedding_matrix],
                                              input_length=self.manager.MAX_OUTPUT_LENGTH, trainable=False,
-                                             input_shape=(self.NUMBER_OF_SAMPLE, 1, self.manager.MAX_OUTPUT_LENGTH))
-
-        inversed_embedding_matrix = np.linalg.pinv(embedding_matrix)
-        self.targetEmbeddingLayer = Embedding(dimension, self.manager.tokenizerSize + 1, weights=[inversed_embedding_matrix],
-                                             input_length=self.manager.MAX_OUTPUT_LENGTH, trainable=False,
-                                             input_shape=(self.NUMBER_OF_SAMPLE, 1, self.manager.MAX_OUTPUT_LENGTH))
-        return embedding_matrix, inversed_embedding_matrix
+                                             input_shape=(self.NUMBER_OF_SAMPLE, self.manager.MAX_OUTPUT_LENGTH))
+        return embedding_matrix
 
     def sequenceToSequenceModel(self):
-        embedding_matrix, inversed_embedding_matrix = self.loadEmbedding(self.GLOVE_WEIGHT_PATH, self.EMBEDDING_DIMENSION)
+        embedding_matrix = self.loadEmbedding(self.GLOVE_WEIGHT_PATH, self.EMBEDDING_DIMENSION)
         self.createTokenizerFromTrainingData(self.TRAINING_DATA_PATH, self.PROGRESS_PATH, embedding_matrix)
         if Path(self.MODEL_PATH).exists():
             print(" -I- [modelCreation.sequenceToSequenceModel] Loading model from " + self.MODEL_PATH)
@@ -96,8 +90,7 @@ class modelCreation:
 
         # Output
         decoder_dense = Dense(self.manager.MAX_OUTPUT_LENGTH, activation='softmax')
-        decoder_outputs = self.targetEmbeddingLayer(decoder_outputs)
-        decoder_outputs = decoder_outputs(decoder_dense)
+        decoder_outputs = decoder_dense(decoder_outputs)
 
         model = Model([encoder_inputs, decoder_inputs], decoder_outputs)
         model.compile(optimizer='rmsprop', loss='categorical_crossentropy')
