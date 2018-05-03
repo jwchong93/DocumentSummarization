@@ -1,6 +1,6 @@
 from keras.layers import Embedding, Flatten
 from keras.models import Model, load_model
-from keras.layers import LSTM, Dense, Input
+from keras.layers import LSTM, TimeDistributed, Input, Dense
 import numpy as np
 import dataReader as dr
 import dataManager as dm
@@ -25,14 +25,15 @@ class modelCreation:
         # Internal
         self.current_progress = 0
         self.embeddings_lookup_table = None
+        self.embedding_matrix = None
         # Constant change it according to training machine
         self.NUMBER_OF_LSTM = 400
         self.NUMBER_OF_SAMPLE = 512
-        self.EMBEDDING_DIMENSION = 50
+        self.EMBEDDING_DIMENSION = 100
         self.PROGRESS_PATH = "Data/progress.txt"
         self.TRAINING_DATA_PATH = "Data/training_data/DUC2007_Summarization_Documents/duc2007_testdocs/"
         # self.TRAINING_DATA_PATH = "Data/training_data/Reviews.csv"
-        self.GLOVE_WEIGHT_PATH = "Data/pre_trained_GloVe/glove.6B.50d.txt"
+        self.GLOVE_WEIGHT_PATH = "Data/pre_trained_GloVe/glove.6B.100d.txt"
         self.MODEL_PATH = "Data/s2s.h5"
 
     def createTokenizerFromTrainingData(self, training_data_path, progress_path, embedding_matrix):
@@ -69,8 +70,8 @@ class modelCreation:
         return embedding_matrix
 
     def sequenceToSequenceModel(self):
-        embedding_matrix = self.loadEmbedding(self.GLOVE_WEIGHT_PATH, self.EMBEDDING_DIMENSION)
-        self.createTokenizerFromTrainingData(self.TRAINING_DATA_PATH, self.PROGRESS_PATH, embedding_matrix)
+        self.embedding_matrix = self.loadEmbedding(self.GLOVE_WEIGHT_PATH, self.EMBEDDING_DIMENSION)
+        self.createTokenizerFromTrainingData(self.TRAINING_DATA_PATH, self.PROGRESS_PATH, self.embedding_matrix)
         if Path(self.MODEL_PATH).exists():
             print(" -I- [modelCreation.sequenceToSequenceModel] Loading model from " + self.MODEL_PATH)
             model = load_model(self.MODEL_PATH)
@@ -89,11 +90,13 @@ class modelCreation:
         decoder_outputs, _, _ = decoder_lstm(x, initial_state=encoder_states)
 
         # Output
-        decoder_dense = Dense(self.manager.MAX_OUTPUT_LENGTH, activation='softmax')
+        decoder_dense = TimeDistributed( Dense(self.EMBEDDING_DIMENSION, input_shape=(self.manager.MAX_OUTPUT_LENGTH,
+                                                                  self.NUMBER_OF_LSTM), activation='softmax'))
         decoder_outputs = decoder_dense(decoder_outputs)
 
         model = Model([encoder_inputs, decoder_inputs], decoder_outputs)
-        model.compile(optimizer='rmsprop', loss='categorical_crossentropy')
+        model.compile(optimizer='adam', loss='mean_squared_error')
+        # model.compile(optimizer='adam', loss='cosine_proximity')
         model.summary(line_length=200)
 
         return model, self.manager
@@ -103,3 +106,6 @@ class modelCreation:
             ts = int(time.time())
             os.rename(self.MODEL_PATH, self.MODEL_PATH + "_" + str(ts))
         model.save(self.MODEL_PATH)
+
+    def refreshData(self):
+        self.createTokenizerFromTrainingData(self.TRAINING_DATA_PATH, self.PROGRESS_PATH, self.embedding_matrix)

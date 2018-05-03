@@ -21,8 +21,7 @@ class dataManager:
         self.outputTexts = []
         # Constant
         self.MAX_INPUT_LENGTH = 400
-        self.MAX_OUTPUT_LENGTH = 50
-        pass
+        self.MAX_OUTPUT_LENGTH = 20
 
     def initializeTokenizer (self, lookup_table, bagOfWords):
         listOfWords = list(lookup_table.keys())

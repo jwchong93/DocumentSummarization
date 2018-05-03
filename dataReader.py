@@ -67,7 +67,6 @@ class dataReader:
                 parser.feed(html)
                 input_texts.append(parser.inputText.replace('\n', ' ').strip())
                 target_texts.append(parser.targetText.replace('\n', ' ').strip())
-        print(input_texts, target_texts)
         return input_texts, target_texts
 
     def readReviews (self, training_data_path, current_progress, sample_to_extract):
@@ -119,9 +118,7 @@ class dataReader:
         bagOfWords = []
         embeddings_index = dict()
         f = open(weight_path, encoding="utf8")
-        for i, line in enumerate(f):
-            if i >= 200000:
-                break
+        for line in f:
             values = line.split()
             word = values[0].lower()
             if self.wordIsNumber(word):
