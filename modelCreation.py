@@ -1,6 +1,7 @@
 from keras.layers import Embedding, Flatten
 from keras.models import Model, load_model
 from keras.layers import LSTM, TimeDistributed, Input, Dense
+from keras.optimizers import SGD
 import numpy as np
 import dataReader as dr
 import dataManager as dm
@@ -34,7 +35,8 @@ class modelCreation:
         self.TRAINING_DATA_PATH = "Data/training_data/DUC2007_Summarization_Documents/duc2007_testdocs/"
         # self.TRAINING_DATA_PATH = "Data/training_data/Reviews.csv"
         self.GLOVE_WEIGHT_PATH = "Data/pre_trained_GloVe/glove.6B.100d.txt"
-        self.MODEL_PATH = "Data/s2s.h5"
+        # self.MODEL_PATH = "Data/s2s.h5"
+        self.MODEL_PATH = "Data/s2s_100d_sgd_cosine_similarity.h5"
 
     def createTokenizerFromTrainingData(self, training_data_path, progress_path, embedding_matrix):
         print (" -I- [modelCreation.createTokenizerFromTrainingData] Creating data set with respect to embedding")
@@ -69,11 +71,11 @@ class modelCreation:
                                              input_shape=(self.NUMBER_OF_SAMPLE, self.manager.MAX_OUTPUT_LENGTH))
         return embedding_matrix
 
-    def sequenceToSequenceModel(self):
+    def sequenceToSequenceModelTrain(self):
         self.embedding_matrix = self.loadEmbedding(self.GLOVE_WEIGHT_PATH, self.EMBEDDING_DIMENSION)
         self.createTokenizerFromTrainingData(self.TRAINING_DATA_PATH, self.PROGRESS_PATH, self.embedding_matrix)
         if Path(self.MODEL_PATH).exists():
-            print(" -I- [modelCreation.sequenceToSequenceModel] Loading model from " + self.MODEL_PATH)
+            print(" -I- [modelCreation.sequenceToSequenceModelTrain] Loading model from " + self.MODEL_PATH)
             model = load_model(self.MODEL_PATH)
             return model, self.manager
 
@@ -95,7 +97,9 @@ class modelCreation:
         decoder_outputs = decoder_dense(decoder_outputs)
 
         model = Model([encoder_inputs, decoder_inputs], decoder_outputs)
-        model.compile(optimizer='adam', loss='mean_squared_error')
+        optimizer = SGD(lr=0.01, momentum=0.5, decay=(0.01/500), nesterov=True)
+        model.compile(optimizer=optimizer, loss='cosine_proximity')
+        # model.compile(optimizer='adam', loss='mean_squared_error')
         # model.compile(optimizer='adam', loss='cosine_proximity')
         model.summary(line_length=200)
 
@@ -109,3 +113,18 @@ class modelCreation:
 
     def refreshData(self):
         self.createTokenizerFromTrainingData(self.TRAINING_DATA_PATH, self.PROGRESS_PATH, self.embedding_matrix)
+
+    def sequenceToSequenceModelInference(self, numberOfTest):
+        if Path(self.MODEL_PATH).exists():
+            print(" -I- [modelCreation.sequenceToSequenceInference] Loading model from " + self.MODEL_PATH)
+            model = load_model(self.MODEL_PATH)
+        else:
+            print(" -E- [modelCreation.sequenceToSequenceInference] " + self.MODEL_PATH + " does not exist")
+            return
+        print(" -I- [modelCreation.sequenceToSequenceInference] Loading GloVe vector from " + self.GLOVE_WEIGHT_PATH)
+        self.embedding_matrix = self.loadEmbedding(self.GLOVE_WEIGHT_PATH, self.EMBEDDING_DIMENSION)
+        print(" -I- [modelCreation.sequenceToSequenceInference] Reading training data " + self.TRAINING_DATA_PATH)
+        self.createTokenizerFromTrainingData(self.TRAINING_DATA_PATH, self.PROGRESS_PATH, self.embedding_matrix)
+
+        outputSequence = model.predict(self.manager.inputData)
+        print (outputSequence)

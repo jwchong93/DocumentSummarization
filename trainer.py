@@ -7,12 +7,12 @@ class trainer:
         self.model = None
         self.dataManager = None
         self.batch_size = 16  # Batch size for training.
-        self.epochs = 100  # Number of epochs to train for.
+        self.epochs = 300  # Number of epochs to train for.
         self.iteration = 16
         pass
 
     def sequenceToSequenceTrain (self):
-        self.model, self.dataManager = self.creator.sequenceToSequenceModel()
+        self.model, self.dataManager = self.creator.sequenceToSequenceModelTrain()
 
         for i in range(self.iteration):
 
@@ -24,3 +24,6 @@ class trainer:
                                       self.creator.current_progress + self.creator.NUMBER_OF_SAMPLE)
             self.creator.saveCurrentModelToFile(self.model)
             self.creator.refreshData()
+
+    def sequenceToSequenceInference(self):
+        self.creator.sequenceToSequenceModelInference(10)
