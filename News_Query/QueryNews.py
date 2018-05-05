@@ -22,7 +22,6 @@ def get_document_and_summary_with_classical_method():
     fs = FrequencySummarizer()
     for article_url in to_summarize[:5]:
         title, text = get_only_text(article_url)
-        #print (title)
         summary = ""
         for s in fs.summarize(text, 2):
             summary += s

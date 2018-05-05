@@ -1,8 +1,4 @@
-from keras.preprocessing.text import Tokenizer
-from keras.preprocessing.sequence import pad_sequences
 import numpy as np
-import re
-from nltk.corpus import stopwords
 from nltk.stem import SnowballStemmer
 
 class dataManager:
@@ -26,9 +22,9 @@ class dataManager:
     def initializeTokenizer (self, lookup_table, bagOfWords):
         listOfWords = list(lookup_table.keys())
         for word in bagOfWords:
-            self.wordToIndex[word] = listOfWords.index(word)
-        for key, value in self.wordToIndex.items():
-            self.IndexToWord[value] = key
+            index = listOfWords.index(word)
+            self.wordToIndex[word] = index
+            self.IndexToWord[index] = word
         self.tokenizerSize = len(self.wordToIndex)
 
     def saveInputData(self, input_texts):
@@ -36,8 +32,7 @@ class dataManager:
             (len(input_texts), self.MAX_INPUT_LENGTH), dtype='uint32')
         for t, input_text in enumerate(input_texts):
             text = input_text.lower()
-            text = self.removeStopWords(text)
-            text = self.replaceShortForm(text)
+            text = text.split()
             text = self.removeStemming(text)
             self.inputTexts.append(text)
 
@@ -59,14 +54,12 @@ class dataManager:
 
         for t, target_text in enumerate(target_texts):
             text = target_text.lower()
-            text = self.removeStopWords(text)
-            text = self.replaceShortForm(text)
+            text = text.split()
             text = self.removeStemming(text)
-            # Make sure the start (\t) and stop (\n) does not replace by padding
             if len(text) >= (self.MAX_OUTPUT_LENGTH - 2):
-                text = "\t" + text[0:(self.MAX_OUTPUT_LENGTH - 2)] + '\n'
+                text = ["GO"] + text[0:(self.MAX_OUTPUT_LENGTH - 2)] + ['END']
             else:
-                text = "0" * (self.MAX_OUTPUT_LENGTH - 2 - len(text)) + "\t" + text + '\n'
+                text = ["UNK"] * (self.MAX_OUTPUT_LENGTH - 2 - len(text)) + ["GO"] + text + ['END']
             self.targetTexts.append(text)
 
             output_text = text[1:]
@@ -77,7 +70,7 @@ class dataManager:
                 else:
                     tempWord = word
                 index = self.wordToIndex[tempWord]
-                self.inputData[t, i] = index
+                self.outputData[t, i] = index
             for i, word in enumerate(target_text):
                 if word not in self.wordToIndex:
                     tempWord = 'UNK'
@@ -87,47 +80,42 @@ class dataManager:
         print("Output Text Shape:%s" % str(self.outputData.shape))
         print("Target Text Shape:%s" % str(self.targetData.shape))
 
-    def replaceShortForm (self, text):
-        text = re.sub(r"[^A-Za-z0-9^,!.\/'+-=]", " ", text)
-        text = re.sub(r"what's", "what is ", text)
-        text = re.sub(r"\'s", " ", text)
-        text = re.sub(r"\'ve", " have ", text)
-        text = re.sub(r"can't", "cannot ", text)
-        text = re.sub(r"n't", " not ", text)
-        text = re.sub(r"i'm", "i am ", text)
-        text = re.sub(r"\'re", " are ", text)
-        text = re.sub(r"\'d", " would ", text)
-        text = re.sub(r"\'ll", " will ", text)
-        text = re.sub(r",", " ", text)
-        text = re.sub(r"\.", " ", text)
-        text = re.sub(r"!", " ! ", text)
-        text = re.sub(r"\/", " ", text)
-        text = re.sub(r"\^", " ^ ", text)
-        text = re.sub(r"\+", " + ", text)
-        text = re.sub(r"\-", " - ", text)
-        text = re.sub(r"\=", " = ", text)
-        text = re.sub(r"'", " ", text)
-        text = re.sub(r"(\d+)(k)", r"\g<1>000", text)
-        text = re.sub(r":", " : ", text)
-        text = re.sub(r" e g ", " eg ", text)
-        text = re.sub(r" b g ", " bg ", text)
-        text = re.sub(r" u s ", " american ", text)
-        text = re.sub(r"\0s", "0", text)
-        text = re.sub(r" 9 11 ", "911", text)
-        text = re.sub(r"e - mail", "email", text)
-        text = re.sub(r"j k", "jk", text)
-        text = re.sub(r"\s{2,}", " ", text)
-        return text
-
     def removeStemming (self, text):
-        text = text.split()
         stemmer = SnowballStemmer('english')
         stemmed_words = [stemmer.stem(word) for word in text]
-        text = " ".join(stemmed_words)
-        return text
+        return stemmed_words
 
-    def removeStopWords (self, text):
-        stop_words = set(stopwords.words("english"))
-        text = [w for w in text if w not in stop_words]
-        text = " ".join(text)
-        return text
+    def convertVectorsToSentences(self, outputSequence, lookupTable, maxLength, chooseBestScore = True):
+        for vector in outputSequence:
+            bestScoreWord, leastDiffWord = self.getSimilarWords(vector, lookupTable)
+            if chooseBestScore:
+                return bestScoreWord
+            else:
+                return leastDiffWord
+
+    def getSimilarWords(self, vector, table):
+        bestScore = 99999
+        leastDiff = 99999
+        bestScoreWord = None
+        leastDiffWord = None
+        for word in table.keys():
+            coef1MinusCoef2 = 0
+            minCoef1MinusCoef2 = 0
+            lsitOfCoef1 = vector.tolist()
+            listOfCoef2 = table[word].tolist()
+            for coef1, coef2 in zip(lsitOfCoef1, listOfCoef2):
+                print(coef1)
+                print(coef2)
+                different = abs(coef1 - coef2)
+                coef1MinusCoef2 += different
+                if different < minCoef1MinusCoef2:
+                    minCoef1MinusCoef2 = different
+            if minCoef1MinusCoef2 < leastDiff:
+                leastDiff = minCoef1MinusCoef2
+                leastDiffWord = word
+
+            if coef1MinusCoef2 < bestScore:
+                bestScore = coef1MinusCoef2
+                bestScoreWord = word
+
+        return bestScoreWord, leastDiffWord

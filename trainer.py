@@ -6,7 +6,7 @@ class trainer:
         self.writer = dw.dataWriter()
         self.model = None
         self.dataManager = None
-        self.batch_size = 16  # Batch size for training.
+        self.batch_size = 64  # Batch size for training.
         self.epochs = 300  # Number of epochs to train for.
         self.iteration = 16
         pass
@@ -26,4 +26,4 @@ class trainer:
             self.creator.refreshData()
 
     def sequenceToSequenceInference(self):
-        self.creator.sequenceToSequenceModelInference(10)
+        self.creator.sequenceToSequenceModelInference()

@@ -3,5 +3,4 @@ from datetime import datetime
 
 print(datetime.now().time())
 test = t.trainer()
-test.sequenceToSequenceInference()
-
+test.sequenceToSequenceTrain()

@@ -1,4 +1,4 @@
-from keras.layers import Embedding, Flatten
+from keras.layers import Embedding
 from keras.models import Model, load_model
 from keras.layers import LSTM, TimeDistributed, Input, Dense
 from keras.optimizers import SGD
@@ -35,15 +35,15 @@ class modelCreation:
         self.TRAINING_DATA_PATH = "Data/training_data/DUC2007_Summarization_Documents/duc2007_testdocs/"
         # self.TRAINING_DATA_PATH = "Data/training_data/Reviews.csv"
         self.GLOVE_WEIGHT_PATH = "Data/pre_trained_GloVe/glove.6B.100d.txt"
-        # self.MODEL_PATH = "Data/s2s.h5"
-        self.MODEL_PATH = "Data/s2s_100d_sgd_cosine_similarity.h5"
+        self.MODEL_PATH = "Data/s2s.h5"
+        # self.MODEL_PATH = "Data/s2s_100d_sgd_cosine_similarity.h5"
 
-    def createTokenizerFromTrainingData(self, training_data_path, progress_path, embedding_matrix):
-        print (" -I- [modelCreation.createTokenizerFromTrainingData] Creating data set with respect to embedding")
+    def createTokenizerFromTrainingData(self):
+        print(" -I- [modelCreation.createTokenizerFromTrainingData] Creating data set with respect to embedding")
         # Read the last progress
-        self.current_progress = self.reader.readProgress(progress_path)
+        self.current_progress = self.reader.readProgress(self.PROGRESS_PATH)
         # Read the training data start from last progress
-        input_texts, target_texts = self.reader.readTrainingData(training_data_path, self.current_progress,
+        input_texts, target_texts = self.reader.readTrainingData(self.TRAINING_DATA_PATH, self.current_progress,
                                                                  self.NUMBER_OF_SAMPLE)
         self.NUMBER_OF_SAMPLE = len(input_texts)
         if input_texts == [] or target_texts == []:
@@ -73,7 +73,7 @@ class modelCreation:
 
     def sequenceToSequenceModelTrain(self):
         self.embedding_matrix = self.loadEmbedding(self.GLOVE_WEIGHT_PATH, self.EMBEDDING_DIMENSION)
-        self.createTokenizerFromTrainingData(self.TRAINING_DATA_PATH, self.PROGRESS_PATH, self.embedding_matrix)
+        self.createTokenizerFromTrainingData()
         if Path(self.MODEL_PATH).exists():
             print(" -I- [modelCreation.sequenceToSequenceModelTrain] Loading model from " + self.MODEL_PATH)
             model = load_model(self.MODEL_PATH)
@@ -97,8 +97,8 @@ class modelCreation:
         decoder_outputs = decoder_dense(decoder_outputs)
 
         model = Model([encoder_inputs, decoder_inputs], decoder_outputs)
-        optimizer = SGD(lr=0.01, momentum=0.5, decay=(0.01/500), nesterov=True)
-        model.compile(optimizer=optimizer, loss='cosine_proximity')
+        optimizer = SGD(lr=1, momentum=0.7, decay=0.0005, nesterov=True)
+        model.compile(optimizer=optimizer, loss='mean_squared_error')
         # model.compile(optimizer='adam', loss='mean_squared_error')
         # model.compile(optimizer='adam', loss='cosine_proximity')
         model.summary(line_length=200)
@@ -112,9 +112,40 @@ class modelCreation:
         model.save(self.MODEL_PATH)
 
     def refreshData(self):
-        self.createTokenizerFromTrainingData(self.TRAINING_DATA_PATH, self.PROGRESS_PATH, self.embedding_matrix)
+        self.createTokenizerFromTrainingData()
 
-    def sequenceToSequenceModelInference(self, numberOfTest):
+    def dataGenerator(self):
+        input_texts, output_texts = self.reader.readTrainingData(self.TRAINING_DATA_PATH, 0,
+                                                                 self.NUMBER_OF_SAMPLE)
+        if input_texts == [] or output_texts == []:
+            raise EOFError("Data finished")
+
+        for input_text, output_text in zip(input_texts, output_texts):
+            self.manager.inputData = np.zeros(
+                (1, self.manager.MAX_INPUT_LENGTH), dtype='uint32')
+            for i, word in enumerate(input_text[:self.manager.MAX_INPUT_LENGTH]):
+                if word not in self.manager.wordToIndex:
+                    tempWord = 'UNK'
+                else:
+                    tempWord = word
+                self.manager.inputData[0, i] = self.manager.wordToIndex[tempWord]
+            self.manager.outputData = np.zeros(
+                (1, self.manager.MAX_OUTPUT_LENGTH), dtype='float32')
+            target_text = ["GO"]
+            for i, word in enumerate(target_text):
+                if word not in self.manager.wordToIndex:
+                    tempWord = 'UNK'
+                else:
+                    tempWord = word
+                self.manager.outputData[0, i] = self.manager.wordToIndex[tempWord]
+            print("Input Text:")
+            print(input_text)
+            print("Output Text")
+            print(output_text)
+            yield self.manager.inputData, self.manager.outputData
+
+
+    def sequenceToSequenceModelInference(self):
         if Path(self.MODEL_PATH).exists():
             print(" -I- [modelCreation.sequenceToSequenceInference] Loading model from " + self.MODEL_PATH)
             model = load_model(self.MODEL_PATH)
@@ -123,8 +154,11 @@ class modelCreation:
             return
         print(" -I- [modelCreation.sequenceToSequenceInference] Loading GloVe vector from " + self.GLOVE_WEIGHT_PATH)
         self.embedding_matrix = self.loadEmbedding(self.GLOVE_WEIGHT_PATH, self.EMBEDDING_DIMENSION)
-        print(" -I- [modelCreation.sequenceToSequenceInference] Reading training data " + self.TRAINING_DATA_PATH)
-        self.createTokenizerFromTrainingData(self.TRAINING_DATA_PATH, self.PROGRESS_PATH, self.embedding_matrix)
-
-        outputSequence = model.predict(self.manager.inputData)
-        print (outputSequence)
+        print(" -I- [modelCreation.sequenceToSequenceInference] Reading one data from" + self.TRAINING_DATA_PATH)
+        generator = self.dataGenerator()
+        for input_data, output_data in generator:
+            outputSequence = model.predict([input_data, output_data])
+            print(outputSequence)
+            output_text = self.manager.convertVectorsToSentences(outputSequence, self.embeddings_lookup_table, self.manager.MAX_OUTPUT_LENGTH)
+            print(output_text)
+            input("Press Enter to Continue...")

@@ -121,19 +121,16 @@ class dataReader:
         for line in f:
             values = line.split()
             word = values[0].lower()
-            if self.wordIsNumber(word):
-                continue
-            else:
-                coefs = np.asarray(values[1:], dtype='float32')
-                embeddings_index[word] = coefs
-                bagOfWords.append(word)
+            coefs = np.asarray(values[1:], dtype='float32')
+            embeddings_index[word] = coefs
+            bagOfWords.append(word)
 
         f.close()
-        embeddings_index['\t'] = np.full(dimension, 0.5, dtype='float32')
-        embeddings_index['\n'] = np.full(dimension, 1.0, dtype='float32')
+        embeddings_index['GO'] = np.full(dimension, 0.5, dtype='float32')
+        embeddings_index['END'] = np.full(dimension, 1.0, dtype='float32')
         embeddings_index['UNK'] = np.full(dimension, 0.0, dtype='float32')
-        bagOfWords.append('\t')
-        bagOfWords.append('\n')
+        bagOfWords.append('GO')
+        bagOfWords.append('END')
         bagOfWords.append('UNK')
         return embeddings_index, bagOfWords
 
