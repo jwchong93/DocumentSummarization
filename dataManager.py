@@ -100,12 +100,10 @@ class dataManager:
         leastDiffWord = None
         for word in table.keys():
             coef1MinusCoef2 = 0
-            minCoef1MinusCoef2 = 0
+            minCoef1MinusCoef2 = 99999
             lsitOfCoef1 = vector.tolist()
             listOfCoef2 = table[word].tolist()
             for coef1, coef2 in zip(lsitOfCoef1, listOfCoef2):
-                print(coef1)
-                print(coef2)
                 different = abs(coef1 - coef2)
                 coef1MinusCoef2 += different
                 if different < minCoef1MinusCoef2:

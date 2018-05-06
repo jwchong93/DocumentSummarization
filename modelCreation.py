@@ -105,7 +105,7 @@ class modelCreation:
 
         return model, self.manager
 
-    def saveCurrentModelToFile(self, model):
+    def     saveCurrentModelToFile(self, model):
         if Path(self.MODEL_PATH).exists():
             ts = int(time.time())
             os.rename(self.MODEL_PATH, self.MODEL_PATH + "_" + str(ts))
@@ -158,7 +158,6 @@ class modelCreation:
         generator = self.dataGenerator()
         for input_data, output_data in generator:
             outputSequence = model.predict([input_data, output_data])
-            print(outputSequence)
-            output_text = self.manager.convertVectorsToSentences(outputSequence, self.embeddings_lookup_table, self.manager.MAX_OUTPUT_LENGTH)
+            output_text = self.manager.convertVectorsToSentences(outputSequence[0], self.embeddings_lookup_table, self.manager.MAX_OUTPUT_LENGTH)
             print(output_text)
             input("Press Enter to Continue...")
