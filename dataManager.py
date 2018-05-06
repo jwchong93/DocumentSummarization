@@ -85,13 +85,18 @@ class dataManager:
         stemmed_words = [stemmer.stem(word) for word in text]
         return stemmed_words
 
-    def convertVectorsToSentences(self, outputSequence, lookupTable, maxLength, chooseBestScore = True):
+    def convertVectorsToSentences(self, outputSequence, lookupTable, chooseBestScore = True):
+        totalBestScoreWord = ""
+        totalLeastDiffWord = ""
         for vector in outputSequence:
             bestScoreWord, leastDiffWord = self.getSimilarWords(vector, lookupTable)
-            if chooseBestScore:
-                return bestScoreWord
-            else:
-                return leastDiffWord
+            totalBestScoreWord += bestScoreWord
+            totalLeastDiffWord += leastDiffWord
+
+        if chooseBestScore:
+            return totalBestScoreWord
+        else:
+            return totalLeastDiffWord
 
     def getSimilarWords(self, vector, table):
         bestScore = 99999

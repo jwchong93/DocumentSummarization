@@ -158,6 +158,6 @@ class modelCreation:
         generator = self.dataGenerator()
         for input_data, output_data in generator:
             outputSequence = model.predict([input_data, output_data])
-            output_text = self.manager.convertVectorsToSentences(outputSequence[0], self.embeddings_lookup_table, self.manager.MAX_OUTPUT_LENGTH)
+            output_text = self.manager.convertVectorsToSentences(outputSequence[0], self.embeddings_lookup_table)
             print(output_text)
             input("Press Enter to Continue...")
