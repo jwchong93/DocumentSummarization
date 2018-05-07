@@ -1,5 +1,6 @@
 import modelCreation as mc
 import dataWriter as dw
+
 class trainer:
     def __init__(self):
         self.creator = mc.modelCreation()
@@ -8,7 +9,7 @@ class trainer:
         self.dataManager = None
         self.batch_size = 64  # Batch size for training.
         self.epochs = 300  # Number of epochs to train for.
-        self.iteration = 16
+        self.iteration = 200
         pass
 
     def sequenceToSequenceTrain (self):

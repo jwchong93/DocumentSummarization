@@ -17,7 +17,7 @@ class dataManager:
         self.outputTexts = []
         # Constant
         self.MAX_INPUT_LENGTH = 400
-        self.MAX_OUTPUT_LENGTH = 20
+        self.MAX_OUTPUT_LENGTH = 10
 
     def initializeTokenizer (self, lookup_table, bagOfWords):
         listOfWords = list(lookup_table.keys())
@@ -59,7 +59,7 @@ class dataManager:
             if len(text) >= (self.MAX_OUTPUT_LENGTH - 2):
                 text = ["GO"] + text[0:(self.MAX_OUTPUT_LENGTH - 2)] + ['END']
             else:
-                text = ["UNK"] * (self.MAX_OUTPUT_LENGTH - 2 - len(text)) + ["GO"] + text + ['END']
+                text = ["PAD"] * (self.MAX_OUTPUT_LENGTH - 2 - len(text)) + ["GO"] + text + ['END']
             self.targetTexts.append(text)
 
             output_text = text[1:]
@@ -90,8 +90,8 @@ class dataManager:
         totalLeastDiffWord = []
         for vector in outputSequence:
             bestScoreWord, leastDiffWord = self.getSimilarWords(vector, lookupTable)
-            totalBestScoreWord += bestScoreWord
-            totalLeastDiffWord += leastDiffWord
+            totalBestScoreWord += bestScoreWord + " "
+            totalLeastDiffWord += leastDiffWord + " "
 
         if chooseBestScore:
             return totalBestScoreWord

@@ -5,3 +5,8 @@ class dataWriter:
         fh = open(path, 'w')
         fh.write(str(data))
         fh.close()
+
+def writeProgress(path, data):
+    fh = open(path, 'w')
+    fh.write(str(data))
+    fh.close()

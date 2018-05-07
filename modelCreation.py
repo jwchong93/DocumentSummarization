@@ -8,6 +8,7 @@ import dataManager as dm
 from pathlib import Path
 import os
 import time
+import dataWriter
 
 class modelCreation:
 
@@ -39,15 +40,21 @@ class modelCreation:
         # self.MODEL_PATH = "Data/s2s_100d_sgd_cosine_similarity.h5"
 
     def createTokenizerFromTrainingData(self):
+        self.NUMBER_OF_SAMPLE = 512
         print(" -I- [modelCreation.createTokenizerFromTrainingData] Creating data set with respect to embedding")
         # Read the last progress
         self.current_progress = self.reader.readProgress(self.PROGRESS_PATH)
         # Read the training data start from last progress
         input_texts, target_texts = self.reader.readTrainingData(self.TRAINING_DATA_PATH, self.current_progress,
                                                                  self.NUMBER_OF_SAMPLE)
-        self.NUMBER_OF_SAMPLE = len(input_texts)
         if input_texts == [] or target_texts == []:
-            raise EOFError("Data finished")
+            self.NUMBER_OF_SAMPLE = 512
+            dataWriter.writeProgress(self.PROGRESS_PATH, 0)
+            self.current_progress = self.reader.readProgress(self.PROGRESS_PATH)
+            input_texts, target_texts = self.reader.readTrainingData(self.TRAINING_DATA_PATH, self.current_progress,
+                                                                     self.NUMBER_OF_SAMPLE)
+        self.NUMBER_OF_SAMPLE = len(input_texts)
+
         # Initialize the tokenizer with respect to the data that read into embedding
         self.manager.saveInputData(input_texts)
         self.manager.saveOutputData(target_texts, self.embeddings_lookup_table, self.EMBEDDING_DIMENSION)
@@ -92,15 +99,14 @@ class modelCreation:
         decoder_outputs, _, _ = decoder_lstm(x, initial_state=encoder_states)
 
         # Output
-        decoder_dense = TimeDistributed( Dense(self.EMBEDDING_DIMENSION, input_shape=(self.manager.MAX_OUTPUT_LENGTH,
+        decoder_dense = TimeDistributed(Dense(self.EMBEDDING_DIMENSION, input_shape=(self.manager.MAX_OUTPUT_LENGTH,
                                                                   self.NUMBER_OF_LSTM), activation='softmax'))
         decoder_outputs = decoder_dense(decoder_outputs)
 
         model = Model([encoder_inputs, decoder_inputs], decoder_outputs)
-        optimizer = SGD(lr=1, momentum=0.7, decay=0.0005, nesterov=True)
-        model.compile(optimizer=optimizer, loss='mean_squared_error')
-        # model.compile(optimizer='adam', loss='mean_squared_error')
-        # model.compile(optimizer='adam', loss='cosine_proximity')
+        optimizer = SGD(lr=0.1, momentum=0.7, nesterov=True)
+        #model.compile(optimizer=optimizer, loss='mean_squared_error')
+        model.compile(optimizer=optimizer, loss='cosine_proximity')
         model.summary(line_length=200)
 
         return model, self.manager

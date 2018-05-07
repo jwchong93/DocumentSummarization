@@ -128,10 +128,12 @@ class dataReader:
         f.close()
         embeddings_index['GO'] = np.full(dimension, 0.5, dtype='float32')
         embeddings_index['END'] = np.full(dimension, 1.0, dtype='float32')
-        embeddings_index['UNK'] = np.full(dimension, 0.0, dtype='float32')
+        embeddings_index['UNK'] = np.full(dimension, -1.0, dtype='float32')
+        embeddings_index['PAD'] = np.full(dimension, -0.5, dtype='float32')
         bagOfWords.append('GO')
         bagOfWords.append('END')
         bagOfWords.append('UNK')
+        bagOfWords.append('PAD')
         return embeddings_index, bagOfWords
 
     def wordIsNumber (self, s):
