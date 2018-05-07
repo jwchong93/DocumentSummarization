@@ -104,8 +104,8 @@ class modelCreation:
         decoder_outputs = decoder_dense(decoder_outputs)
 
         model = Model([encoder_inputs, decoder_inputs], decoder_outputs)
-        optimizer = SGD(lr=0.1, momentum=0.7, nesterov=True)
-        model.compile(optimizer=optimizer, loss='mean_squared_error')
+        #optimizer = SGD(lr=0.1, momentum=0.7, nesterov=True)
+        model.compile(optimizer='rmsprop', loss='mean_squared_error')
         #model.compile(optimizer=optimizer, loss='cosine_proximity')
         model.summary(line_length=200)
 
@@ -168,20 +168,3 @@ class modelCreation:
                                                                  chooseBestScore= True)
             print(output_text)
             input("Press Enter to Continue...")
-
-test = modelCreation()
-if Path(test.MODEL_PATH).exists():
-    print(" -I- [modelCreation.sequenceToSequenceInference] Loading model from " + test.MODEL_PATH)
-    model = load_model(test.MODEL_PATH)
-else:
-    print(" -E- [modelCreation.sequenceToSequenceInference] " + test.MODEL_PATH + " does not exist")
-print(" -I- [modelCreation.sequenceToSequenceInference] Loading GloVe vector from " + test.GLOVE_WEIGHT_PATH)
-test.embedding_matrix = test.loadEmbedding(test.GLOVE_WEIGHT_PATH, test.EMBEDDING_DIMENSION)
-print(" -I- [modelCreation.sequenceToSequenceInference] Reading one data from" + test.TRAINING_DATA_PATH)
-generator = test.dataGenerator()
-input_data, output_data = next(generator)
-outputSequence = model.predict([input_data, output_data])
-output_text = test.manager.convertVectorsToSentences(outputSequence[0], test.embeddings_lookup_table,
-                                                     chooseBestScore= True)
-print(output_text)
-input("Press Enter to Continue...")
