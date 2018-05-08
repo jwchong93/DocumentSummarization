@@ -164,8 +164,12 @@ class modelCreation:
             temp_output_data = output_data
             for i in range(self.manager.MAX_OUTPUT_LENGTH):
                 outputSequence = model.predict([input_data, temp_output_data])
+                print(outputSequence)
+                print(temp_output_data)
                 temp_output_data[0, i+1] = outputSequence[0, i]
                 output_text = self.manager.convertVectorsToSentences(outputSequence[0], self.embeddings_lookup_table,
                                                                  chooseBestScore=False)
-                print(output_text)
+                print("Loop " + str(i))
+                print("Expected output: " + target_text)
+                print("Real output: " + output_text)
             input("Press Enter to Continue...")
