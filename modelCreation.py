@@ -162,7 +162,7 @@ class modelCreation:
         generator = self.dataGenerator()
         for input_data, output_data, input_text, target_text in generator:
             temp_output_data = output_data
-            for i in range(20):
+            for i in range(self.manager.MAX_OUTPUT_LENGTH):
                 outputSequence = model.predict([input_data, temp_output_data])
                 temp_output_data[0, i+1] = outputSequence[0, i]
                 output_text = self.manager.convertVectorsToSentences(outputSequence[0], self.embeddings_lookup_table,
