@@ -1,7 +1,8 @@
 from keras.layers import Embedding
 from keras.models import Model, load_model
 from keras.layers import LSTM, TimeDistributed, Input, Dense
-from keras.optimizers import SGD
+from keras.optimizers import rmsprop
+
 import numpy as np
 import dataReader as dr
 import dataManager as dm
@@ -100,12 +101,13 @@ class modelCreation:
 
         # Output
         decoder_dense = TimeDistributed(Dense(self.EMBEDDING_DIMENSION, input_shape=(self.manager.MAX_OUTPUT_LENGTH,
-                                                                  self.NUMBER_OF_LSTM), activation='softmax'))
+                                                                  self.NUMBER_OF_LSTM)))
         decoder_outputs = decoder_dense(decoder_outputs)
 
         model = Model([encoder_inputs, decoder_inputs], decoder_outputs)
         #optimizer = SGD(lr=0.1, momentum=0.7, nesterov=True)
-        model.compile(optimizer='rmsprop', loss='mean_squared_error')
+        optimizer = rmsprop(lr=0.01)
+        model.compile(optimizer=optimizer, loss='mean_squared_error')
         #model.compile(optimizer=optimizer, loss='cosine_proximity')
         model.summary(line_length=200)
 
@@ -144,11 +146,7 @@ class modelCreation:
                 else:
                     tempWord = word
                 self.manager.outputData[0, i] = self.manager.wordToIndex[tempWord]
-            print("Input Text:")
-            print(input_text)
-            print("Output Text")
-            print(output_text)
-            yield self.manager.inputData, self.manager.outputData
+            yield self.manager.inputData, self.manager.outputData, input_text, output_text
 
 
     def sequenceToSequenceModelInference(self):
@@ -162,9 +160,12 @@ class modelCreation:
         self.embedding_matrix = self.loadEmbedding(self.GLOVE_WEIGHT_PATH, self.EMBEDDING_DIMENSION)
         print(" -I- [modelCreation.sequenceToSequenceInference] Reading one data from" + self.TRAINING_DATA_PATH)
         generator = self.dataGenerator()
-        for input_data, output_data in generator:
-            outputSequence = model.predict([input_data, output_data])
-            output_text = self.manager.convertVectorsToSentences(outputSequence[0], self.embeddings_lookup_table,
-                                                                 chooseBestScore= True)
-            print(output_text)
+        for input_data, output_data, input_text, target_text in generator:
+            temp_output_data = output_data
+            for i in range(20):
+                outputSequence = model.predict([input_data, temp_output_data])
+                temp_output_data[0, i+1] = outputSequence[0, i]
+                output_text = self.manager.convertVectorsToSentences(outputSequence[0], self.embeddings_lookup_table,
+                                                                 chooseBestScore=False)
+                print(output_text)
             input("Press Enter to Continue...")
