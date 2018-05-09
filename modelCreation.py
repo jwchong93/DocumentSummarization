@@ -2,7 +2,7 @@ from keras.layers import Embedding
 from keras.models import Model, load_model
 from keras.layers import LSTM, TimeDistributed, Input, Dense
 from keras.optimizers import rmsprop
-
+import nltk
 import numpy as np
 import dataReader as dr
 import dataManager as dm
@@ -101,13 +101,13 @@ class modelCreation:
 
         # Output
         decoder_dense = TimeDistributed(Dense(self.EMBEDDING_DIMENSION, input_shape=(self.manager.MAX_OUTPUT_LENGTH,
-                                                                  self.NUMBER_OF_LSTM)))
+                                                                  self.NUMBER_OF_LSTM), activation='softmax'))
         decoder_outputs = decoder_dense(decoder_outputs)
 
         model = Model([encoder_inputs, decoder_inputs], decoder_outputs)
         #optimizer = SGD(lr=0.1, momentum=0.7, nesterov=True)
         optimizer = rmsprop(lr=0.01)
-        model.compile(optimizer=optimizer, loss='mean_squared_error')
+        model.compile(optimizer=optimizer, loss='mean_squared_error', metrics=['accuracy'])
         #model.compile(optimizer=optimizer, loss='cosine_proximity')
         model.summary(line_length=200)
 
@@ -160,16 +160,21 @@ class modelCreation:
         self.embedding_matrix = self.loadEmbedding(self.GLOVE_WEIGHT_PATH, self.EMBEDDING_DIMENSION)
         print(" -I- [modelCreation.sequenceToSequenceInference] Reading one data from" + self.TRAINING_DATA_PATH)
         generator = self.dataGenerator()
+        self.embeddings_lookup_table.pop('UNK')
+        self.embeddings_lookup_table.pop('GO')
+        self.embeddings_lookup_table.pop('PAD')
+        self.embeddings_lookup_table.pop('END')
+        total_case = 0
         for input_data, output_data, input_text, target_text in generator:
             temp_output_data = output_data
-            for i in range(self.manager.MAX_OUTPUT_LENGTH):
+            for i in range(self.manager.MAX_OUTPUT_LENGTH - 1):
                 outputSequence = model.predict([input_data, temp_output_data])
-                print(outputSequence)
-                print(temp_output_data)
-                temp_output_data[0, i+1] = outputSequence[0, i]
+                model.reset_states()
                 output_text = self.manager.convertVectorsToSentences(outputSequence[0], self.embeddings_lookup_table,
-                                                                 chooseBestScore=False)
+                                                                 chooseBestScore=False, cosineSimilarity=True)
+                output_list = output_text.split()
+                temp_output_data[0, i + 1] = self.manager.wordToIndex[output_list[i]]
                 print("Loop " + str(i))
                 print("Expected output: " + target_text)
                 print("Real output: " + output_text)
-            input("Press Enter to Continue...")
+                print("BLUE Score:" + str(nltk.translate.bleu_score.sentence_bleu([target_text], output_text)))

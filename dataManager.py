@@ -1,6 +1,6 @@
 import numpy as np
 from nltk.stem import SnowballStemmer
-
+from scipy import spatial
 class dataManager:
     def __init__(self):
         # Shared
@@ -59,7 +59,7 @@ class dataManager:
             if len(text) >= (self.MAX_OUTPUT_LENGTH - 2):
                 text = ["GO"] + text[0:(self.MAX_OUTPUT_LENGTH - 2)] + ['END']
             else:
-                text = ["PAD"] * (self.MAX_OUTPUT_LENGTH - 2 - len(text)) + ["GO"] + text + ['END']
+                text = ["GO"] + text + ['END'] + ["PAD"] * (self.MAX_OUTPUT_LENGTH - 2 - len(text))
             self.targetTexts.append(text)
 
             output_text = text[1:]
@@ -85,14 +85,18 @@ class dataManager:
         stemmed_words = [stemmer.stem(word) for word in text]
         return stemmed_words
 
-    def convertVectorsToSentences(self, outputSequence, lookupTable, chooseBestScore = True):
+    def convertVectorsToSentences(self, outputSequence, lookupTable, chooseBestScore = True, cosineSimilarity = True):
         totalBestScoreWord = ""
         totalLeastDiffWord = ""
+        totalCosineSimilarWord = ""
         for vector in outputSequence:
-            bestScoreWord, leastDiffWord = self.getSimilarWords(vector, lookupTable)
+            bestScoreWord, leastDiffWord, cosineSimilarWord = self.getSimilarWords(vector, lookupTable)
             totalBestScoreWord += bestScoreWord + " "
             totalLeastDiffWord += leastDiffWord + " "
+            totalCosineSimilarWord += cosineSimilarWord + " "
 
+        if cosineSimilarity:
+            return totalCosineSimilarWord
         if chooseBestScore:
             return totalBestScoreWord
         else:
@@ -101,14 +105,23 @@ class dataManager:
     def getSimilarWords(self, vector, table):
         bestScore = 99999
         leastDiff = 99999
+        cosineSimilar = 99999
         bestScoreWord = None
         leastDiffWord = None
+        cosineSimilarWord = None
         for word in table.keys():
             coef1MinusCoef2 = 0
             minCoef1MinusCoef2 = 99999
-            lsitOfCoef1 = vector.tolist()
+            listOfCoef1 = vector.tolist()
             listOfCoef2 = table[word].tolist()
-            for coef1, coef2 in zip(lsitOfCoef1, listOfCoef2):
+
+            #Cosine Similarity
+            cosine_result = spatial.distance.cosine(listOfCoef1, listOfCoef2)
+            if cosine_result < cosineSimilar:
+                cosineSimilar = cosine_result
+                cosineSimilarWord = word
+
+            for coef1, coef2 in zip(listOfCoef1, listOfCoef2):
                 different = abs(coef1 - coef2)
                 coef1MinusCoef2 += different
                 if different < minCoef1MinusCoef2:
@@ -121,4 +134,4 @@ class dataManager:
                 bestScore = coef1MinusCoef2
                 bestScoreWord = word
 
-        return bestScoreWord, leastDiffWord
+        return bestScoreWord, leastDiffWord, cosineSimilarWord

@@ -1,5 +1,6 @@
 import modelCreation as mc
 import dataWriter as dw
+import matplotlib.pyplot as plt
 
 class trainer:
     def __init__(self):
@@ -9,7 +10,7 @@ class trainer:
         self.dataManager = None
         self.batch_size = 64  # Batch size for training.
         self.epochs = 300  # Number of epochs to train for.
-        self.iteration = 200
+        self.iteration = 1
         pass
 
     def sequenceToSequenceTrain (self):
@@ -19,9 +20,23 @@ class trainer:
         print(scores)
         for i in range(self.iteration):
 
-            self.model.fit([self.dataManager.inputData, self.dataManager.outputData], self.dataManager.targetData,
+            history = self.model.fit([self.dataManager.inputData, self.dataManager.outputData], self.dataManager.targetData,
                            batch_size=self.batch_size, epochs=self.epochs, validation_split=0.2)
-
+            plt.plot(history.history['acc'])
+            plt.plot(history.history['val_acc'])
+            plt.title('model accuracy')
+            plt.ylabel('accuracy')
+            plt.xlabel('epoch')
+            plt.legend(['train', 'test'], loc='upper left')
+            plt.show()
+            # summarize history for loss
+            plt.plot(history.history['loss'])
+            plt.plot(history.history['val_loss'])
+            plt.title('model loss')
+            plt.ylabel('loss')
+            plt.xlabel('epoch')
+            plt.legend(['train', 'test'], loc='upper left')
+            plt.show()
             # Save model
             self.writer.writeProgress(self.creator.PROGRESS_PATH,
                                       self.creator.current_progress + self.creator.NUMBER_OF_SAMPLE)
