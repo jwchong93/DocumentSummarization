@@ -88,33 +88,19 @@ class dataManager:
         stemmed_words = [stemmer.stem(word) for word in text]
         return stemmed_words
 
-    def convertVectorsToSentences(self, outputSequence, lookupTable, chooseBestScore = True, cosineSimilarity = True):
-        totalBestScoreWord = ""
-        totalLeastDiffWord = ""
+    def convertVectorsToSentences(self, outputSequence, lookupTable, cosineSimilarity = True):
         totalCosineSimilarWord = ""
         for vector in outputSequence:
-            bestScoreWord, leastDiffWord, cosineSimilarWord = self.getSimilarWords(vector, lookupTable)
-            totalBestScoreWord += bestScoreWord + " "
-            totalLeastDiffWord += leastDiffWord + " "
+            cosineSimilarWord = self.getSimilarWords(vector, lookupTable)
             totalCosineSimilarWord += cosineSimilarWord + " "
 
         if cosineSimilarity:
             return totalCosineSimilarWord
-        if chooseBestScore:
-            return totalBestScoreWord
-        else:
-            return totalLeastDiffWord
 
     def getSimilarWords(self, vector, table):
-        bestScore = 99999
-        leastDiff = 99999
         cosineSimilar = 99999
-        bestScoreWord = None
-        leastDiffWord = None
         cosineSimilarWord = None
         for word in table.keys():
-            coef1MinusCoef2 = 0
-            minCoef1MinusCoef2 = 99999
             listOfCoef1 = vector.tolist()
             listOfCoef2 = table[word].tolist()
 
@@ -124,17 +110,4 @@ class dataManager:
                 cosineSimilar = cosine_result
                 cosineSimilarWord = word
 
-            for coef1, coef2 in zip(listOfCoef1, listOfCoef2):
-                different = abs(coef1 - coef2)
-                coef1MinusCoef2 += different
-                if different < minCoef1MinusCoef2:
-                    minCoef1MinusCoef2 = different
-            if minCoef1MinusCoef2 < leastDiff:
-                leastDiff = minCoef1MinusCoef2
-                leastDiffWord = word
-
-            if coef1MinusCoef2 < bestScore:
-                bestScore = coef1MinusCoef2
-                bestScoreWord = word
-
-        return bestScoreWord, leastDiffWord, cosineSimilarWord
+        return cosineSimilarWord

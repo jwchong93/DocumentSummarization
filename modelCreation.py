@@ -170,7 +170,7 @@ class modelCreation:
                 outputSequence = model.predict([input_data, temp_output_data])
                 model.reset_states()
                 output_text = self.manager.convertVectorsToSentences(outputSequence[0], self.embeddings_lookup_table,
-                                                                 chooseBestScore=False, cosineSimilarity=True)
+                                                                 cosineSimilarity=True)
                 output_list = output_text.split()
                 temp_output_data[0, i + 1] = self.manager.wordToIndex[output_list[i]]
                 print("Loop " + str(i))
