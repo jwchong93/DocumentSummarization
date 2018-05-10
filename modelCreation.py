@@ -31,7 +31,7 @@ class modelCreation:
         self.embedding_matrix = None
         # Constant change it according to training machine
         self.NUMBER_OF_LSTM = 400
-        self.NUMBER_OF_SAMPLE = 512
+        self.NUMBER_OF_SAMPLE = 1375
         self.EMBEDDING_DIMENSION = 100
         self.PROGRESS_PATH = "Data/progress.txt"
         self.TRAINING_DATA_PATH = "Data/training_data/DUC2007_Summarization_Documents/duc2007_testdocs/"
@@ -101,7 +101,7 @@ class modelCreation:
 
         # Output
         decoder_dense = TimeDistributed(Dense(self.EMBEDDING_DIMENSION, input_shape=(self.manager.MAX_OUTPUT_LENGTH,
-                                                                  self.NUMBER_OF_LSTM), activation='softmax'))
+                                                                  self.NUMBER_OF_LSTM)))
         decoder_outputs = decoder_dense(decoder_outputs)
 
         model = Model([encoder_inputs, decoder_inputs], decoder_outputs)
@@ -164,7 +164,6 @@ class modelCreation:
         self.embeddings_lookup_table.pop('GO')
         self.embeddings_lookup_table.pop('PAD')
         self.embeddings_lookup_table.pop('END')
-        total_case = 0
         for input_data, output_data, input_text, target_text in generator:
             temp_output_data = output_data
             for i in range(self.manager.MAX_OUTPUT_LENGTH - 1):

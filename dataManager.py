@@ -1,6 +1,9 @@
 import numpy as np
 from nltk.stem import SnowballStemmer
-from scipy import spatial
+from numpy import dot
+from numpy.linalg import norm
+import math
+
 class dataManager:
     def __init__(self):
         # Shared
@@ -116,7 +119,7 @@ class dataManager:
             listOfCoef2 = table[word].tolist()
 
             #Cosine Similarity
-            cosine_result = spatial.distance.cosine(listOfCoef1, listOfCoef2)
+            cosine_result = math.acos(dot(listOfCoef1, listOfCoef2)/(norm(listOfCoef1)*norm(listOfCoef2)))
             if cosine_result < cosineSimilar:
                 cosineSimilar = cosine_result
                 cosineSimilarWord = word

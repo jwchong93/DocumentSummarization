@@ -10,7 +10,7 @@ class trainer:
         self.dataManager = None
         self.batch_size = 64  # Batch size for training.
         self.epochs = 300  # Number of epochs to train for.
-        self.iteration = 1
+        self.iteration = 16
         pass
 
     def sequenceToSequenceTrain (self):
@@ -24,19 +24,22 @@ class trainer:
                            batch_size=self.batch_size, epochs=self.epochs, validation_split=0.2)
             plt.plot(history.history['acc'])
             plt.plot(history.history['val_acc'])
-            plt.title('model accuracy')
+            plt.title('training accuracy')
             plt.ylabel('accuracy')
             plt.xlabel('epoch')
             plt.legend(['train', 'test'], loc='upper left')
-            plt.show()
+            plt.savefig("Accuracy_" + str(i+1))
+            plt.clf()
+
             # summarize history for loss
             plt.plot(history.history['loss'])
             plt.plot(history.history['val_loss'])
-            plt.title('model loss')
+            plt.title('training loss')
             plt.ylabel('loss')
             plt.xlabel('epoch')
             plt.legend(['train', 'test'], loc='upper left')
-            plt.show()
+            plt.savefig("Loss_" + str(i + 1))
+            plt.clf()
             # Save model
             self.writer.writeProgress(self.creator.PROGRESS_PATH,
                                       self.creator.current_progress + self.creator.NUMBER_OF_SAMPLE)
