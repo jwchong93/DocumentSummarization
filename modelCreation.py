@@ -1,6 +1,6 @@
 from keras.layers import Embedding
 from keras.models import Model, load_model
-from keras.layers import LSTM, TimeDistributed, Input, Dense
+from keras.layers import LSTM, TimeDistributed, Input, Dense,concatenate, RepeatVector
 from keras.optimizers import rmsprop
 import nltk
 import numpy as np
@@ -26,6 +26,8 @@ class modelCreation:
         # Output
         # Internal
         self.current_progress = 0
+        self.modelTrain = self.sequenceToSequenceModelTrain
+        #self.modelTrain = self.recursiveModelTrain
         # Constant change it according to training machine
         self.NUMBER_OF_LSTM = 400
         self.NUMBER_OF_SAMPLE = 1375
@@ -51,10 +53,14 @@ class modelCreation:
         self.NUMBER_OF_SAMPLE = len(input_texts)
 
         #Tokenize the all the data
-        self.manager.tokenizeData (input_texts + target_texts)
+        self.manager.tokenizeData (input_texts , target_texts)
         # Initialize the tokenizer with respect to the data that read into embedding
         self.manager.saveInputData(input_texts)
         self.manager.saveOutputData(target_texts)
+
+
+    def modelTrain(self):
+        pass
 
     def sequenceToSequenceModelTrain(self):
         self.createTokenizerFromTrainingData()
@@ -87,7 +93,54 @@ class modelCreation:
 
         return model, self.manager
 
-    def     saveCurrentModelToFile(self, model):
+    def oneshotModelTraing(self):
+        self.createTokenizerFromTrainingData()
+        if Path(self.MODEL_PATH).exists():
+            print(" -I- [modelCreation.recursiveModelTrain] Loading model from " + self.MODEL_PATH)
+            model = load_model(self.MODEL_PATH)
+            return model, self.manager
+
+        # encoder input model
+        inputs = Input(shape=(self.manager.MAX_INPUT_LENGTH,))
+        encoder1 = Embedding(vocab_size, 128)(inputs)
+        encoder2 = LSTM(128)(encoder1)
+        encoder3 = RepeatVector(self.manager.MAX_OUTPUT_LENGTH)(encoder2)
+        # decoder output model
+        decoder1 = LSTM(128, return_sequences=True)(encoder3)
+        outputs = TimeDistributed(Dense(vocab_size, activation='softmax'))(decoder1)
+        # tie it together
+        model = Model(inputs=inputs, outputs=outputs)
+        model.compile(loss='categorical_crossentropy', optimizer='adam')
+
+        return model, self.manager
+
+    def recursiveModelTrain(self):
+        self.createTokenizerFromTrainingData()
+        if Path(self.MODEL_PATH).exists():
+            print(" -I- [modelCreation.recursiveModelTrain] Loading model from " + self.MODEL_PATH)
+            model = load_model(self.MODEL_PATH)
+            return model, self.manager
+
+        # source text input model
+        inputs1 = Input(shape=(self.manager.MAX_INPUT_LENGTH,))
+        am1 = Embedding(self.manager.tokenizer.__sizeof__(), 128)(inputs1)
+        am2 = LSTM(128)(am1)
+        # summary input model
+        inputs2 = Input(shape=(self.manager.MAX_OUTPUT_LENGTH,))
+        sm1 = Embedding(self.manager.tokenizer.__sizeof__(), 128)(inputs2)
+        sm2 = LSTM(128)(sm1)
+        # decoder output model
+        decoder1 = concatenate([am2, sm2])
+        outputs = Dense(self.manager.tokenizer.__sizeof__(), activation='softmax')(decoder1)
+        # tie it together [article, summary] [word]
+        model = Model(inputs=[inputs1, inputs2], outputs=outputs)
+        model.compile(loss='categorical_crossentropy', optimizer='adam')
+        #model.compile(optimizer=optimizer, loss='cosine_proximity')
+        model.summary(line_length=200)
+
+        return model, self.manager
+
+    def saveCurrentModelToFile(self, model):
         if Path(self.MODEL_PATH).exists():
             ts = int(time.time())
             os.rename(self.MODEL_PATH, self.MODEL_PATH + "_" + str(ts))
@@ -97,29 +150,30 @@ class modelCreation:
         self.createTokenizerFromTrainingData()
 
     def dataGenerator(self):
+        self.manager.reverse_input_word_map = dict(map(reversed, self.manager.inputTokenizer.word_index.items()))
+        self.manager.reverse_output_word_map = dict(map(reversed, self.manager.outputTokenizer.word_index.items()))
         input_texts, output_texts = self.reader.readTrainingData(self.TRAINING_DATA_PATH, 0,
                                                                  self.NUMBER_OF_SAMPLE)
         if input_texts == [] or output_texts == []:
             raise EOFError("Data finished")
-
+        self.manager.tokenizeData(input_texts , output_texts)
         for input_text, output_text in zip(input_texts, output_texts):
             self.manager.inputData = np.zeros(
-                (1, self.manager.MAX_INPUT_LENGTH), dtype='uint32')
-            for i, word in enumerate(input_text[:self.manager.MAX_INPUT_LENGTH]):
-                if word not in self.manager.wordToIndex:
-                    tempWord = 'UNK'
-                else:
-                    tempWord = word
-                self.manager.inputData[0, i] = self.manager.wordToIndex[tempWord]
+                (1, 1,  self.manager.MAX_INPUT_LENGTH), dtype='uint32')
+            splittedLines = input_text.split()
+            input_sequence = self.manager.inputTokenizer.texts_to_sequences(splittedLines[0:self.manager.MAX_INPUT_LENGTH])
+            for i, seq in enumerate(input_sequence):
+                if seq == []:
+                    seq = self.manager.inputTokenizer.texts_to_sequences(["UNK"])[0]
+                self.manager.inputData[0, 0, i] = seq[0]
             self.manager.outputData = np.zeros(
-                (1, self.manager.MAX_OUTPUT_LENGTH), dtype='float32')
-            target_text = ["GO"]
-            for i, word in enumerate(target_text):
-                if word not in self.manager.wordToIndex:
-                    tempWord = 'UNK'
-                else:
-                    tempWord = word
-                self.manager.outputData[0, i] = self.manager.wordToIndex[tempWord]
+                (1, 1, self.manager.MAX_OUTPUT_LENGTH), dtype='uint32')
+            target_text = ["G"]
+            output_sequence = self.manager.outputTokenizer.texts_to_sequences(target_text)
+            for i, seq in enumerate(output_sequence):
+                if seq == []:
+                    seq = self.manager.outputTokenizer.texts_to_sequences(["UNK"])[0]
+                self.manager.outputData[0, 0, i] = seq[0]
             yield self.manager.inputData, self.manager.outputData, input_text, output_text
 
 
@@ -130,24 +184,19 @@ class modelCreation:
         else:
             print(" -E- [modelCreation.sequenceToSequenceInference] " + self.MODEL_PATH + " does not exist")
             return
-        print(" -I- [modelCreation.sequenceToSequenceInference] Loading GloVe vector from " + self.GLOVE_WEIGHT_PATH)
-        self.embedding_matrix = self.loadEmbedding()
         print(" -I- [modelCreation.sequenceToSequenceInference] Reading one data from" + self.TRAINING_DATA_PATH)
+        self.createTokenizerFromTrainingData()
         generator = self.dataGenerator()
-        self.embeddings_lookup_table.pop('UNK')
-        self.embeddings_lookup_table.pop('GO')
-        self.embeddings_lookup_table.pop('PAD')
-        self.embeddings_lookup_table.pop('END')
         for input_data, output_data, input_text, target_text in generator:
             temp_output_data = output_data
             for i in range(self.manager.MAX_OUTPUT_LENGTH - 1):
                 outputSequence = model.predict([input_data, temp_output_data])
                 model.reset_states()
-                output_text = self.manager.convertVectorsToSentences(outputSequence[0], self.embeddings_lookup_table,
-                                                                 cosineSimilarity=True)
+                output_text = self.manager.convertVectorsToSentences(outputSequence)
                 output_list = output_text.split()
-                temp_output_data[0, i + 1] = self.manager.wordToIndex[output_list[i]]
+                temp_output_data[0, 0, i + 1] = self.manager.outputTokenizer.texts_to_sequences(output_list[i])[0][0]
                 print("Loop " + str(i))
                 print("Expected output: " + target_text)
                 print("Real output: " + output_text)
                 print("BLUE Score:" + str(nltk.translate.bleu_score.sentence_bleu([target_text], output_text)))
+            input()

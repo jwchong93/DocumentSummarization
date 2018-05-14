@@ -8,10 +8,10 @@ from keras.preprocessing.text import Tokenizer
 class dataManager:
     def __init__(self):
         # Shared
-        self.wordToIndex = dict()
-        self.IndexToWord = dict()
-        self.tokenizerSize = 0
-        self.tokenizer = Tokenizer()
+        self.inputTokenizer = Tokenizer()
+        self.reverse_input_word_map = None
+        self.outputTokenizer = Tokenizer()
+        self.reverse_output_word_map = None
         # Input
         self.inputData = None
         self.inputTexts = []
@@ -24,22 +24,18 @@ class dataManager:
         self.MAX_INPUT_LENGTH = 400
         self.MAX_OUTPUT_LENGTH = 10
 
-    def initializeTokenizer (self, lookup_table, bagOfWords):
-        listOfWords = list(lookup_table.keys())
-        for word in bagOfWords:
-            index = listOfWords.index(word)
-            self.wordToIndex[word] = index
-            self.IndexToWord[index] = word
-        self.tokenizerSize = len(self.wordToIndex)
-
-    def tokenizeData (self, sentencesList):
-        for sentence in sentencesList:
+    def tokenizeData (self, inputSentenceList, outputSentenceList):
+        for sentence in inputSentenceList:
             sentenceList = sentence.split()
-            self.tokenizer.fit_on_texts(sentenceList)
-        self.tokenizer.fit_on_texts(["PAD"])
-        self.tokenizer.fit_on_texts(["UNK"])
-        self.tokenizer.fit_on_texts(["G"])
-        self.tokenizer.fit_on_texts(["E"])
+            self.inputTokenizer.fit_on_texts(sentenceList)
+        self.inputTokenizer.fit_on_texts(["UNK"])
+        for sentence in outputSentenceList:
+            sentenceList = sentence.split()
+            self.outputTokenizer.fit_on_texts(sentenceList)
+        self.outputTokenizer.fit_on_texts(["PAD"])
+        self.outputTokenizer.fit_on_texts(["UNK"])
+        self.outputTokenizer.fit_on_texts(["G"])
+        self.outputTokenizer.fit_on_texts(["E"])
 
 
     def saveInputData(self, input_texts):
@@ -52,10 +48,10 @@ class dataManager:
             self.inputTexts.append(text)
 
             input_text = text[:self.MAX_INPUT_LENGTH]
-            input_sequence = self.tokenizer.texts_to_sequences(input_text)
+            input_sequence = self.inputTokenizer.texts_to_sequences(input_text)
             for i, seq in enumerate(input_sequence):
                 if seq == []:
-                    seq = self.tokenizer.texts_to_sequences(["UNK"])[0]
+                    seq = self.inputTokenizer.texts_to_sequences(["UNK"])[0]
                 self.inputData[t, 0, i] = seq[0]
 
         print("Input Text Shape:%s" % str(self.inputData.shape))
@@ -79,16 +75,16 @@ class dataManager:
             output_text = text[1:]
             target_text = text
 
-            output_sequence = self.tokenizer.texts_to_sequences(output_text)
+            output_sequence = self.outputTokenizer.texts_to_sequences(output_text)
             for i, seq in enumerate(output_sequence):
                 if seq == []:
-                    seq = self.tokenizer.texts_to_sequences(["UNK"])[0]
+                    seq = self.outputTokenizer.texts_to_sequences(["UNK"])[0]
                 self.outputData[t, 0, i] = seq[0]
 
-            target_sequence = self.tokenizer.texts_to_sequences(target_text)
+            target_sequence = self.outputTokenizer.texts_to_sequences(target_text)
             for i, seq in enumerate(target_sequence):
                 if seq == []:
-                    seq = self.tokenizer.texts_to_sequences(["UNK"])[0]
+                    seq = self.outputTokenizer.texts_to_sequences(["UNK"])[0]
                 self.targetData[t, 0, i] = seq[0]
         print("Output Text Shape:%s" % str(self.outputData.shape))
         print("Target Text Shape:%s" % str(self.targetData.shape))
@@ -98,14 +94,17 @@ class dataManager:
         stemmed_words = [stemmer.stem(word) for word in text]
         return stemmed_words
 
-    def convertVectorsToSentences(self, outputSequence, lookupTable, cosineSimilarity = True):
-        totalCosineSimilarWord = ""
-        for vector in outputSequence:
-            cosineSimilarWord = self.getSimilarWords(vector, lookupTable)
-            totalCosineSimilarWord += cosineSimilarWord + " "
-
-        if cosineSimilarity:
-            return totalCosineSimilarWord
+    def convertVectorsToSentences(self, outputSequence):
+        sentence = ""
+        tempSequence = outputSequence[0,0]
+        for seq in tempSequence:
+            index = abs(int(seq))
+            if index in self.reverse_output_word_map.keys():
+                sentence += self.reverse_output_word_map[index]
+            else:
+                sentence += "unk"
+            sentence += " "
+        return sentence
 
     def getSimilarWords(self, vector, table):
         cosineSimilar = 99999

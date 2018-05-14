@@ -14,7 +14,7 @@ class trainer:
         pass
 
     def sequenceToSequenceTrain (self):
-        self.model, self.dataManager = self.creator.sequenceToSequenceModelTrain()
+        self.model, self.dataManager = self.creator.modelTrain()
         scores = self.model.evaluate([self.dataManager.inputData, self.dataManager.outputData], self.dataManager.targetData,
                             batch_size=self.batch_size)
         print(scores)
