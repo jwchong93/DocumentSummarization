@@ -10,7 +10,7 @@ from pathlib import Path
 import os
 import time
 import dataWriter
-
+from nltk.translate.bleu_score import SmoothingFunction,sentence_bleu
 
 class modelCreation:
 
@@ -187,16 +187,16 @@ class modelCreation:
         print(" -I- [modelCreation.sequenceToSequenceInference] Reading one data from" + self.TRAINING_DATA_PATH)
         self.createTokenizerFromTrainingData()
         generator = self.dataGenerator()
+        BLEU_Smoothing_function = SmoothingFunction()
         for input_data, output_data, input_text, target_text in generator:
             temp_output_data = output_data
             for i in range(self.manager.MAX_OUTPUT_LENGTH - 1):
                 outputSequence = model.predict([input_data, temp_output_data])
-                model.reset_states()
                 output_text = self.manager.convertVectorsToSentences(outputSequence)
                 output_list = output_text.split()
-                temp_output_data[0, 0, i + 1] = self.manager.outputTokenizer.texts_to_sequences(output_list[i])[0][0]
+                temp_output_data[0, 0, i + 1] = self.manager.outputTokenizer.texts_to_sequences([output_list[i]])[0][0]
                 print("Loop " + str(i))
                 print("Expected output: " + target_text)
                 print("Real output: " + output_text)
-                print("BLUE Score:" + str(nltk.translate.bleu_score.sentence_bleu([target_text], output_text)))
+                print("BLUE Score:" + str(sentence_bleu([target_text], output_text, smoothing_function=BLEU_Smoothing_function.method4)))
             input()

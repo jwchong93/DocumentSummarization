@@ -8,9 +8,9 @@ class trainer:
         self.writer = dw.dataWriter()
         self.model = None
         self.dataManager = None
-        self.batch_size = 64  # Batch size for training.
+        self.batch_size = 128  # Batch size for training.
         self.epochs = 300  # Number of epochs to train for.
-        self.iteration = 16
+        self.iteration = 50
         pass
 
     def sequenceToSequenceTrain (self):
