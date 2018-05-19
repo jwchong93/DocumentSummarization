@@ -39,14 +39,19 @@ class dataManager:
             text = self.removeStemming(text)
             self.inputTexts.append(text)
 
-            input_text = text[:self.MAX_INPUT_LENGTH]
-            for i, word in enumerate(input_text):
+            i = 0
+            j = 0
+            text_length = len(text)
+            while i < self.MAX_INPUT_LENGTH and j < self.MAX_INPUT_LENGTH and j < text_length:
+                word = text[j]
+                j += 1
                 if word not in self.wordToIndex:
-                    tempWord = 'UNK'
+                    continue
                 else:
                     tempWord = word
-                index = self.wordToIndex[tempWord]
-                self.inputData[t, i] = index
+                    i += 1
+                    index = self.wordToIndex[tempWord]
+                    self.inputData[t, i] = index
         print("Input Text Shape:%s" % str(self.inputData.shape))
 
     def saveOutputData(self, target_texts, vector_lookup_table , dimension):
@@ -62,7 +67,7 @@ class dataManager:
             if len(text) >= (self.MAX_OUTPUT_LENGTH - 2):
                 text = ["GO"] + text[0:(self.MAX_OUTPUT_LENGTH - 2)] + ['END']
             else:
-                text = ["GO"] + text + ['END'] + ["PAD"] * (self.MAX_OUTPUT_LENGTH - 2 - len(text))
+                text = ["GO"] + text + ['END']
             self.targetTexts.append(text)
 
             output_text = text[1:]

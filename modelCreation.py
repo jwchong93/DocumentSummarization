@@ -88,15 +88,15 @@ class modelCreation:
             return model, self.manager
 
         # Encoder
-        encoder_inputs = Input(shape=(None, ))
+        encoder_inputs = Input(shape=(None, ), batch_shape=(1, self.manager.MAX_INPUT_LENGTH))
         x = self.inputEmbeddingLayer(encoder_inputs)
-        encoder_outputs, state_h, state_c = LSTM(self.NUMBER_OF_LSTM, return_state=True)(x)
+        encoder_outputs, state_h, state_c = LSTM(self.NUMBER_OF_LSTM, return_state=True, stateful=True)(x)
         encoder_states = [state_h, state_c]
 
         # Decoder
-        decoder_inputs = Input(shape=(None, ))
+        decoder_inputs = Input(shape=(None, ), batch_shape=(1, self.manager.MAX_OUTPUT_LENGTH))
         x = self.outputEmbeddingLayer(decoder_inputs)
-        decoder_lstm = LSTM(self.NUMBER_OF_LSTM, return_sequences=True, return_state=True)
+        decoder_lstm = LSTM(self.NUMBER_OF_LSTM, return_sequences=True, return_state=True, stateful=True)
         decoder_outputs, _, _ = decoder_lstm(x, initial_state=encoder_states)
 
         # Output

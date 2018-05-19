@@ -117,6 +117,12 @@ class dataReader:
     def readWeight (self, weight_path, dimension):
         bagOfWords = []
         embeddings_index = dict()
+        embeddings_index['UNK'] = np.full(dimension, 0.0, dtype='float32')
+        embeddings_index['GO'] = np.full(dimension, 0.5, dtype='float32')
+        embeddings_index['END'] = np.full(dimension, 1.0, dtype='float32')
+        bagOfWords.append('UNK')
+        bagOfWords.append('GO')
+        bagOfWords.append('END')
         f = open(weight_path, encoding="utf8")
         for line in f:
             values = line.split()
@@ -124,16 +130,8 @@ class dataReader:
             coefs = np.asarray(values[1:], dtype='float32')
             embeddings_index[word] = coefs
             bagOfWords.append(word)
-
         f.close()
-        embeddings_index['GO'] = np.full(dimension, 0.5, dtype='float32')
-        embeddings_index['END'] = np.full(dimension, 1.0, dtype='float32')
-        embeddings_index['UNK'] = np.full(dimension, -1.0, dtype='float32')
-        embeddings_index['PAD'] = np.full(dimension, -0.5, dtype='float32')
-        bagOfWords.append('GO')
-        bagOfWords.append('END')
-        bagOfWords.append('UNK')
-        bagOfWords.append('PAD')
+
         return embeddings_index, bagOfWords
 
     def wordIsNumber (self, s):
